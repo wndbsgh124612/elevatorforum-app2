@@ -173,15 +173,16 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
     }
 
-    override fun onDestroy() {
-        runCatching {
-            webView.stopLoading()
-            webView.webChromeClient = null
-            webView.webViewClient = null
-            webView.destroy()
-        }
-        super.onDestroy()
+override fun onDestroy() {
+    runCatching {
+        webView.stopLoading()
+        webView.webChromeClient = WebChromeClient()
+        webView.webViewClient = object : WebViewClient() {}
+        webView.destroy()
     }
+    super.onDestroy()
+}
+
 
     private fun loadInitialUrl(intent: Intent?) {
         val pushUrl = intent?.getStringExtra("push_url")
