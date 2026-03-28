@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "43252221989",
+    "project_id": "elevator-forum",
+    "storage_bucket": "elevator-forum.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:43252221989:android:befe3a89b7cd324ea5d7cc",
+        "android_client_info": {
+          "package_name": "com.webview.ElevatorForum"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAX95hUbdJubKzR7sn_CDw9ydnU0J1bwe8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
