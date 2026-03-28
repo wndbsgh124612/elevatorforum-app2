@@ -23,9 +23,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.firebase.messaging.FirebaseMessaging
-import java.net.HttpURLConnection
-import java.net.URLEncoder
-import java.net.URL
 
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
@@ -61,11 +58,10 @@ class MainActivity : AppCompatActivity() {
             runCatching { webView.reload() }
         }
 
-        // 안정화를 위해 restoreState 없이 항상 새로 시작합니다.
         loadInitialUrl(intent)
 
-        // 첫 화면 안정화 뒤 토큰 전송 시도
-        webView.postDelayed({ requestPushPermissionIfNeeded() }, 1200)
+        // 로그인 세션/쿠키가 안정적으로 잡힌 뒤 토큰 저장 시도
+        webView.postDelayed({ requestPushPermissionIfNeeded() }, 3000)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -90,7 +86,7 @@ class MainActivity : AppCompatActivity() {
             setSupportMultipleWindows(false)
             builtInZoomControls = false
             displayZoomControls = false
-            userAgentString = "$userAgentString ElevatorForumApp/1.1"
+            userAgentString = "$userAgentString ElevatorForumApp/1.2"
         }
 
         webView.isFocusable = true
@@ -173,16 +169,15 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
     }
 
-override fun onDestroy() {
-    runCatching {
-        webView.stopLoading()
-        webView.webChromeClient = WebChromeClient()
-        webView.webViewClient = object : WebViewClient() {}
-        webView.destroy()
+    override fun onDestroy() {
+        runCatching {
+            webView.stopLoading()
+            webView.webChromeClient = WebChromeClient()
+            webView.webViewClient = object : WebViewClient() {}
+            webView.destroy()
+        }
+        super.onDestroy()
     }
-    super.onDestroy()
-}
-
 
     private fun loadInitialUrl(intent: Intent?) {
         val pushUrl = intent?.getStringExtra("push_url")
@@ -257,23 +252,41 @@ override fun onDestroy() {
     }
 
     private fun sendTokenToServer(token: String) {
-        Thread {
-            runCatching {
-                val url = URL(getString(R.string.token_url))
-                val body = "token=" + URLEncoder.encode(token, "UTF-8") + "&device=android"
+        val safeToken = token
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace("\n", "")
+            .replace("\r", "")
 
-                val connection = (url.openConnection() as HttpURLConnection).apply {
-                    requestMethod = "POST"
-                    doOutput = true
-                    connectTimeout = 10000
-                    readTimeout = 10000
-                    setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+        val tokenUrl = getString(R.string.token_url)
+
+        val js = """
+            (function() {
+                try {
+                    fetch('$tokenUrl', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                        },
+                        body: 'token=' + encodeURIComponent('$safeToken') + '&device=android'
+                    }).then(function(res) {
+                        return res.text();
+                    }).then(function(txt) {
+                        console.log('push token saved:', txt);
+                    }).catch(function(err) {
+                        console.log('push token save failed:', err);
+                    });
+                } catch (e) {
+                    console.log('push token js exception:', e);
                 }
+            })();
+        """.trimIndent()
 
-                connection.outputStream.use { it.write(body.toByteArray()) }
-                runCatching { connection.inputStream.bufferedReader().use { it.readText() } }
-                connection.disconnect()
+        runOnUiThread {
+            runCatching {
+                webView.evaluateJavascript(js, null)
             }
-        }.start()
+        }
     }
 }
