@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.ElevatorForum" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@color/ef_black</item>
+        <item name="android:navigationBarColor">@color/ef_black</item>
+        <item name="android:windowBackground">@color/ef_black</item>
+    </style>
+</resources>
