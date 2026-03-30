@@ -106,6 +106,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     companion object {
-        private const val CHANNEL_ID = "elevator_forum_alert_v8"
+        private const val CHANNEL_ID = "elevator_forum_alert_v9"
     }
 }
