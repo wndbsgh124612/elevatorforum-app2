@@ -1,6 +1,5 @@
 package com.webview.ElevatorForum
 
-import android.view.ViewGroup
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
@@ -58,13 +57,12 @@ class MainActivity : AppCompatActivity() {
         webView = findViewById(R.id.webView)
         swipeRefresh = findViewById(R.id.swipeRefresh)
 
-        // 모바일 WebView 메뉴 스크롤과 충돌하므로 앱 당겨서 새로고침은 끔
+        // 당겨서 새로고침은 완전 비활성화
         swipeRefresh.isEnabled = false
 
         applyWindowInsets()
         configureWebView()
         configureBackPress()
-
         loadInitialUrl(intent)
 
         webView.postDelayed({ requestPushPermissionIfNeeded() }, 3000)
@@ -77,12 +75,19 @@ class MainActivity : AppCompatActivity() {
             safeTopPx = systemBars.top
             safeBottomPx = systemBars.bottom
 
+            // 루트 여백
             view.setPadding(0, safeTopPx, 0, safeBottomPx)
+
+            // 웹뷰 자체에도 강제 적용
+            webView.setPadding(0, safeTopPx, 0, safeBottomPx)
+            webView.clipToPadding = false
 
             runCatching { applySafeAreaToWeb() }
 
             insets
         }
+
+        ViewCompat.requestApplyInsets(swipeRefresh)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -107,12 +112,13 @@ class MainActivity : AppCompatActivity() {
             setSupportMultipleWindows(false)
             builtInZoomControls = false
             displayZoomControls = false
-            userAgentString = "$userAgentString ElevatorForumApp/1.5"
+            userAgentString = "$userAgentString ElevatorForumApp/1.6"
         }
 
         webView.isFocusable = true
         webView.isFocusableInTouchMode = true
         webView.overScrollMode = WebView.OVER_SCROLL_NEVER
+        webView.isVerticalScrollBarEnabled = false
 
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(
@@ -127,6 +133,7 @@ class MainActivity : AppCompatActivity() {
                 super.onPageFinished(view, url)
                 runCatching { CookieManager.getInstance().flush() }
                 applySafeAreaToWeb()
+                disablePullToRefreshByJs()
             }
         }
 
@@ -183,12 +190,11 @@ class MainActivity : AppCompatActivity() {
                                 padding-top: var(--app-safe-top) !important;
                                 padding-bottom: var(--app-safe-bottom) !important;
                                 box-sizing: border-box !important;
+                                overscroll-behavior-y: none !important;
                             }
 
-                            body.menu-open,
-                            body.side-open,
-                            body.drawer-open {
-                                overscroll-behavior-y: contain !important;
+                            body, .wrap, .wrapper, .container, .content, #wrap {
+                                padding-top: var(--app-safe-top) !important;
                             }
 
                             header,
@@ -207,6 +213,7 @@ class MainActivity : AppCompatActivity() {
                             .header_wrap,
                             .header-wrap {
                                 top: var(--app-safe-top) !important;
+                                padding-top: 0 !important;
                             }
 
                             .bottom-nav,
@@ -235,11 +242,65 @@ class MainActivity : AppCompatActivity() {
                                 padding-top: calc(var(--app-safe-top) + 8px) !important;
                                 padding-bottom: calc(var(--app-safe-bottom) + 8px) !important;
                                 box-sizing: border-box !important;
+                                overscroll-behavior-y: contain !important;
+                                -webkit-overflow-scrolling: touch !important;
                             }
                         `;
                         document.head.appendChild(style);
                     }
                 } catch (e) {}
+            })();
+        """.trimIndent()
+
+        runCatching { webView.evaluateJavascript(js, null) }
+    }
+
+    private fun disablePullToRefreshByJs() {
+        val js = """
+            (function() {
+                try {
+                    document.documentElement.style.overscrollBehaviorY = 'none';
+                    document.body.style.overscrollBehaviorY = 'none';
+
+                    let startY = 0;
+                    document.addEventListener('touchstart', function(e) {
+                        if (e.touches && e.touches.length > 0) {
+                            startY = e.touches[0].clientY;
+                        }
+                    }, {passive:true});
+
+                    document.addEventListener('touchmove', function(e) {
+                        var target = e.target;
+                        var inMenu = false;
+
+                        while (target) {
+                            if (
+                                target.id === 'sidebar' ||
+                                target.id === 'gnb' ||
+                                (target.classList && (
+                                    target.classList.contains('hamburger-menu') ||
+                                    target.classList.contains('side-menu') ||
+                                    target.classList.contains('drawer-menu') ||
+                                    target.classList.contains('offcanvas') ||
+                                    target.classList.contains('mobile-menu') ||
+                                    target.classList.contains('rb-sidebar') ||
+                                    target.classList.contains('menu-panel')
+                                ))
+                            ) {
+                                inMenu = true;
+                                break;
+                            }
+                            target = target.parentElement;
+                        }
+
+                        if (!inMenu && window.scrollY <= 0 && e.touches && e.touches.length > 0) {
+                            var currentY = e.touches[0].clientY;
+                            if (currentY > startY) {
+                                e.preventDefault();
+                            }
+                        }
+                    }, {passive:false});
+                } catch(e) {}
             })();
         """.trimIndent()
 
