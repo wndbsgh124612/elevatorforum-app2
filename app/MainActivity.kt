@@ -64,6 +64,7 @@ class MainActivity : AppCompatActivity() {
 
         loadInitialUrl(intent)
 
+        // 로그인 세션/쿠키가 안정적으로 잡힌 뒤 토큰 저장 시도
         webView.postDelayed({ requestPushPermissionIfNeeded() }, 3000)
     }
 
@@ -97,7 +98,7 @@ class MainActivity : AppCompatActivity() {
             setSupportMultipleWindows(false)
             builtInZoomControls = false
             displayZoomControls = false
-            userAgentString = "$userAgentString ElevatorForumApp/1.3"
+            userAgentString = "$userAgentString ElevatorForumApp/1.4"
         }
 
         webView.isFocusable = true
@@ -117,6 +118,7 @@ class MainActivity : AppCompatActivity() {
                 super.onPageFinished(view, url)
                 swipeRefresh.isRefreshing = false
                 runCatching { CookieManager.getInstance().flush() }
+                applySafeAreaToWeb()
             }
         }
 
@@ -152,6 +154,35 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    private fun applySafeAreaToWeb() {
+        val js = """
+            (function() {
+                try {
+                    if (!document.getElementById('ef-safe-area-style')) {
+                        var style = document.createElement('style');
+                        style.id = 'ef-safe-area-style';
+                        style.innerHTML = `
+                            html, body {
+                                padding-top: env(safe-area-inset-top) !important;
+                                padding-bottom: env(safe-area-inset-bottom) !important;
+                                box-sizing: border-box !important;
+                            }
+                            header, .header, .top-header, .navbar, .gnb, .rb-header, .fixed-top, .top_area {
+                                top: env(safe-area-inset-top) !important;
+                            }
+                            .bottom-nav, .tabbar, .footer-nav, .mobile-nav, .rb-bottombar, .fixed-bottom {
+                                bottom: env(safe-area-inset-bottom) !important;
+                            }
+                        `;
+                        document.head.appendChild(style);
+                    }
+                } catch (e) {}
+            })();
+        """.trimIndent()
+
+        runCatching { webView.evaluateJavascript(js, null) }
     }
 
     private fun configureBackPress() {
@@ -264,7 +295,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             .addOnFailureListener {
-                // 실패해도 앱 실행 막지 않음
+                // 실패해도 앱 실행은 막지 않음
             }
     }
 
