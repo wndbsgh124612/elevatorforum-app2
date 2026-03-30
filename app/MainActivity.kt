@@ -31,6 +31,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
 
+    private var safeTopPx: Int = 0
+    private var safeBottomPx: Int = 0
+
     private val fileChooserLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             val results =
@@ -54,24 +57,29 @@ class MainActivity : AppCompatActivity() {
         webView = findViewById(R.id.webView)
         swipeRefresh = findViewById(R.id.swipeRefresh)
 
+        // 모바일 WebView 메뉴 스크롤과 충돌하므로 앱 당겨서 새로고침은 끔
+        swipeRefresh.isEnabled = false
+
         applyWindowInsets()
         configureWebView()
         configureBackPress()
 
-        swipeRefresh.setOnRefreshListener {
-            runCatching { webView.reload() }
-        }
-
         loadInitialUrl(intent)
 
-        // 로그인 세션/쿠키가 안정적으로 잡힌 뒤 토큰 저장 시도
         webView.postDelayed({ requestPushPermissionIfNeeded() }, 3000)
     }
 
     private fun applyWindowInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(swipeRefresh) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.setPadding(0, systemBars.top, 0, systemBars.bottom)
+
+            safeTopPx = systemBars.top
+            safeBottomPx = systemBars.bottom
+
+            view.setPadding(0, safeTopPx, 0, safeBottomPx)
+
+            runCatching { applySafeAreaToWeb() }
+
             insets
         }
     }
@@ -98,7 +106,7 @@ class MainActivity : AppCompatActivity() {
             setSupportMultipleWindows(false)
             builtInZoomControls = false
             displayZoomControls = false
-            userAgentString = "$userAgentString ElevatorForumApp/1.4"
+            userAgentString = "$userAgentString ElevatorForumApp/1.5"
         }
 
         webView.isFocusable = true
@@ -116,7 +124,6 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                swipeRefresh.isRefreshing = false
                 runCatching { CookieManager.getInstance().flush() }
                 applySafeAreaToWeb()
             }
@@ -160,20 +167,73 @@ class MainActivity : AppCompatActivity() {
         val js = """
             (function() {
                 try {
+                    var topPx = '${safeTopPx}px';
+                    var bottomPx = '${safeBottomPx}px';
+
+                    document.documentElement.style.setProperty('--app-safe-top', topPx);
+                    document.documentElement.style.setProperty('--app-safe-bottom', bottomPx);
+
                     if (!document.getElementById('ef-safe-area-style')) {
                         var style = document.createElement('style');
                         style.id = 'ef-safe-area-style';
                         style.innerHTML = `
                             html, body {
-                                padding-top: env(safe-area-inset-top) !important;
-                                padding-bottom: env(safe-area-inset-bottom) !important;
+                                margin: 0 !important;
+                                padding-top: var(--app-safe-top) !important;
+                                padding-bottom: var(--app-safe-bottom) !important;
                                 box-sizing: border-box !important;
                             }
-                            header, .header, .top-header, .navbar, .gnb, .rb-header, .fixed-top, .top_area {
-                                top: env(safe-area-inset-top) !important;
+
+                            body.menu-open,
+                            body.side-open,
+                            body.drawer-open {
+                                overscroll-behavior-y: contain !important;
                             }
-                            .bottom-nav, .tabbar, .footer-nav, .mobile-nav, .rb-bottombar, .fixed-bottom {
-                                bottom: env(safe-area-inset-bottom) !important;
+
+                            header,
+                            .header,
+                            .top-header,
+                            .navbar,
+                            .gnb,
+                            .rb-header,
+                            .fixed-top,
+                            .top_area,
+                            .mobile-header,
+                            .site-header,
+                            #header,
+                            #hd,
+                            .hd,
+                            .header_wrap,
+                            .header-wrap {
+                                top: var(--app-safe-top) !important;
+                            }
+
+                            .bottom-nav,
+                            .tabbar,
+                            .footer-nav,
+                            .mobile-nav,
+                            .rb-bottombar,
+                            .fixed-bottom,
+                            .quick-menu,
+                            .dock-menu,
+                            .mobile-footer,
+                            #ft,
+                            #quick_menu {
+                                bottom: var(--app-safe-bottom) !important;
+                            }
+
+                            .hamburger-menu,
+                            .side-menu,
+                            .drawer-menu,
+                            .offcanvas,
+                            .mobile-menu,
+                            .rb-sidebar,
+                            #sidebar,
+                            #gnb,
+                            .menu-panel {
+                                padding-top: calc(var(--app-safe-top) + 8px) !important;
+                                padding-bottom: calc(var(--app-safe-bottom) + 8px) !important;
+                                box-sizing: border-box !important;
                             }
                         `;
                         document.head.appendChild(style);
@@ -189,7 +249,6 @@ class MainActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 when {
-                    swipeRefresh.isRefreshing -> swipeRefresh.isRefreshing = false
                     webView.canGoBack() -> webView.goBack()
                     else -> finish()
                 }
@@ -206,7 +265,6 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         runCatching { webView.onResume() }
-        swipeRefresh.isRefreshing = false
     }
 
     override fun onPause() {
@@ -295,7 +353,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             .addOnFailureListener {
-                // 실패해도 앱 실행은 막지 않음
             }
     }
 
