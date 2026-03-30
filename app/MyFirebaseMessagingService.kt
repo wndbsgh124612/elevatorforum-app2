@@ -25,7 +25,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
-
         createChannel()
 
         val title = message.notification?.title
@@ -105,7 +104,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     companion object {
-        // 소리 바뀌게 하려면 채널 ID 새로 바꿔줘야 함
         private const val CHANNEL_ID = "elevator_forum_alert_v5"
     }
 }
