@@ -20,11 +20,12 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        // 토큰 저장은 MainActivity에서 세션 쿠키 포함 방식으로 처리
+        // 토큰 저장은 MainActivity에서 처리
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
+
         createChannel()
 
         val title = message.notification?.title
@@ -51,6 +52,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val soundUri = Uri.parse("android.resource://${packageName}/${R.raw.elevator_alert}")
+
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
@@ -61,6 +64,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setSound(soundUri)
             .setDefaults(NotificationCompat.DEFAULT_VIBRATE or NotificationCompat.DEFAULT_LIGHTS)
             .build()
 
@@ -78,13 +82,14 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val soundUri =
-                Uri.parse("android.resource://${packageName}/${R.raw.elevatorforum_alert}")
+            val soundUri = Uri.parse("android.resource://${packageName}/${R.raw.elevator_alert}")
 
             val audioAttributes = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build()
+
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
             val channel = NotificationChannel(
                 CHANNEL_ID,
@@ -98,12 +103,12 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
             }
 
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
     }
 
     companion object {
-        private const val CHANNEL_ID = "elevator_forum_alert_v5"
+        // 채널 설정 강제 갱신용
+        private const val CHANNEL_ID = "elevator_forum_alert_v6"
     }
 }
