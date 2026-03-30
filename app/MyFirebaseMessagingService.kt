@@ -28,12 +28,12 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         createChannel()
 
-        val title = message.notification?.title
-            ?: message.data["title"]
+        val title = message.data["title"]
+            ?: message.notification?.title
             ?: getString(R.string.app_name)
 
-        val body = message.notification?.body
-            ?: message.data["body"]
+        val body = message.data["body"]
+            ?: message.notification?.body
             ?: "새 알림이 도착했습니다."
 
         val targetUrl = message.data["url"]
@@ -52,8 +52,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val soundUri = Uri.parse("android.resource://${packageName}/${R.raw.elevator_alert}")
-
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
@@ -64,8 +62,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setSound(soundUri)
-            .setDefaults(NotificationCompat.DEFAULT_VIBRATE or NotificationCompat.DEFAULT_LIGHTS)
             .build()
 
         if (
@@ -91,6 +87,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
+            manager.deleteNotificationChannel(CHANNEL_ID)
+
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "엘리베이터포럼 알림",
@@ -108,7 +106,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     companion object {
-        // 채널 설정 강제 갱신용
-        private const val CHANNEL_ID = "elevator_forum_alert_v7"
+        private const val CHANNEL_ID = "elevator_forum_alert_v8"
     }
 }
