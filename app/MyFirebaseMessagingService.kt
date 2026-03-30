@@ -109,6 +109,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
         // 채널 설정 강제 갱신용
-        private const val CHANNEL_ID = "elevator_forum_alert_v6"
+        private const val CHANNEL_ID = "elevator_forum_alert_v7"
     }
 }
