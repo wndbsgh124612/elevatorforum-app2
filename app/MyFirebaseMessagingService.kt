@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -24,6 +25,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
+
         createChannel()
 
         val title = message.notification?.title
@@ -57,7 +59,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setDefaults(NotificationCompat.DEFAULT_VIBRATE or NotificationCompat.DEFAULT_LIGHTS)
             .build()
 
         if (
@@ -68,25 +73,39 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             NotificationManagerCompat.from(this)
-                .notify(System.currentTimeMillis().toInt(), notification)
+                .notify((System.currentTimeMillis() % 100000).toInt(), notification)
         }
     }
 
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val manager =
-                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val soundUri =
+                Uri.parse("android.resource://${packageName}/${R.raw.elevatorforum_alert}")
+
+            val audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
 
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "기본 알림",
+                "엘리베이터포럼 알림",
                 NotificationManager.IMPORTANCE_HIGH
-            )
+            ).apply {
+                description = "엘리베이터포럼 푸시 알림"
+                enableVibration(true)
+                enableLights(true)
+                setSound(soundUri, audioAttributes)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+            }
+
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
     }
 
     companion object {
-        private const val CHANNEL_ID = "default_channel"
+        // 소리 바뀌게 하려면 채널 ID 새로 바꿔줘야 함
+        private const val CHANNEL_ID = "elevator_forum_alert_v5"
     }
 }
