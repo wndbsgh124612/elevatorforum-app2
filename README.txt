@@ -1,15 +1,10 @@
-엘리베이터포럼 안정화 버전
+ElevatorForum Android project (session+safearea fixed)
 
-변경사항
-- 시작 시 restoreState 제거
-- SplashScreen 제거
-- WebView 시작 로직 단순화
-- 파일 선택기 null 안정화
-- FCM 토큰 전송 실패가 앱 실행을 막지 않도록 처리
-- GitHub Actions 워크플로 포함: .github/workflows/android.yml
+Changes:
+- MainActivity updated to handle safe area (status/nav bars)
+- FCM token save uses WebView fetch(credentials:'include') with session cookies
+- Token URL: http://sellmatch.co.kr/rb/rb.lib/ajax.token_update.php
+- Existing WebView features kept: file chooser, download, external intents, swipe refresh, back navigation
 
-빌드 방법
-1. 새 GitHub 저장소 생성
-2. 이 압축파일을 풀어서 전체 업로드
-3. Actions > Build Android APK > Run workflow
-4. Artifacts 에서 APK 다운로드
+Build:
+- Upload to GitHub and run Actions workflow in .github/workflows/android.yml
