@@ -57,7 +57,6 @@ class MainActivity : AppCompatActivity() {
         webView = findViewById(R.id.webView)
         swipeRefresh = findViewById(R.id.swipeRefresh)
 
-        // 당겨서 새로고침은 완전 비활성화
         swipeRefresh.isEnabled = false
 
         applyWindowInsets()
@@ -75,10 +74,8 @@ class MainActivity : AppCompatActivity() {
             safeTopPx = systemBars.top
             safeBottomPx = systemBars.bottom
 
-            // 루트 여백
             view.setPadding(0, safeTopPx, 0, safeBottomPx)
 
-            // 웹뷰 자체에도 강제 적용
             webView.setPadding(0, safeTopPx, 0, safeBottomPx)
             webView.clipToPadding = false
 
@@ -227,7 +224,7 @@ class MainActivity : AppCompatActivity() {
                             .mobile-footer,
                             #ft,
                             #quick_menu {
-                                bottom: var(--app-safe-bottom) !important;
+                                bottom: calc(var(--app-safe-bottom) + 8px) !important;
                             }
 
                             .hamburger-menu,
